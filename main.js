@@ -1,30 +1,28 @@
-const express = require('express');
 const mysql = require('mysql2');
-const multer = require('multer');
 const xlsx = require('xlsx');
 const path = require('path');
 
-const app = express();
+// MySQL ulanishini o‘rnatish funksiyasi
+const createDatabaseConnection = () => {
+  const db = mysql.createConnection({
+    host: 'localhost',  // Masofaviy yoki lokal server IP manzili
+    user: 'root',           // MySQL foydalanuvchi nomi
+    password: 'your_password', // Foydalanuvchi paroli
+    database: 'excel',      // Ma'lumotlar bazasi nomi
+  });
 
-const db = mysql.createConnection({
-  host: '194.93.25.234',  // Masofaviy serverning IP-manzili
-  user: 'fvv_user',           // Masofaviy MySQL foydalanuvchisi
-  password: 'fvv_!@#$%', // MySQL root foydalanuvchi paroli
-  database: 'fvv',      // Ma'lumotlar bazasi nomi
-  port: 3306              // MySQL odatiy porti
-});
+  db.connect((err) => {
+    if (err) {
+      console.error('MySQLga ulanishda xatolik:', err);
+    } else {
+      console.log('MySQLga muvaffaqiyatli ulandi');
+    }
+  });
 
-db.connect((err) => {
-  if (err) {
-    console.error('MySQLga ulanishda xatolik:', err);
-  } else {
-    console.log('Masofaviy MySQL serverga muvaffaqiyatli ulandi');
-  }
-});
-// Multer bilan fayl yuklash sozlamalari
-const upload = multer({ dest: 'uploads/' });
+  return db;
+};
 
-// Excel faylni o'qib, JSON formatiga aylantiruvchi yordamchi funksiya
+// Excel faylni o'qish va JSON formatiga aylantirish funksiyasi
 const readExcelFile = (filePath) => {
   const workbook = xlsx.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
@@ -32,8 +30,8 @@ const readExcelFile = (filePath) => {
   return xlsx.utils.sheet_to_json(sheet, { header: 1 });
 };
 
-// Ma'lumotlarni MySQL bazasiga yozuvchi yordamchi funksiya
-const insertRecord = async (record) => {
+// Ma'lumotlarni MySQL bazasiga yozish funksiyasi
+const insertRecord = (db, record) => {
   return new Promise((resolve, reject) => {
     const query = `
       INSERT INTO attributes (name, description, lat, lng)
@@ -53,16 +51,14 @@ const insertRecord = async (record) => {
   });
 };
 
-// Excel faylni yuklash va MySQL bazasiga yozish uchun endpoint
-app.get('/upload', async (req, res) => {
-  const filePath = path.join(__dirname, 'uploads', 'координаталар.xlsx');
+// Excel faylni o‘qib, MySQLga yozish jarayonini boshqaruvchi asosiy funksiya
+const processAndUploadFile = async (filePath) => {
+  const db = createDatabaseConnection();
 
   try {
-    // Excel faylni o'qish
     const data = readExcelFile(filePath);
     console.log("Excel fayli tarkibi:", data);
 
-    // Fayldagi ustunlarni tekshirish va MySQLga yozish
     for (const row of data.slice(1)) {  // Birinchi qatorni o'tkazib yuboramiz (ustun sarlavhalari)
       const record = {
         name: row[0],           // RU ustunidagi qiymat
@@ -71,32 +67,28 @@ app.get('/upload', async (req, res) => {
         lng: row[4]             // Unnamed: 4 (долгата)
       };
 
-      // Konsolda yozuvni va maydonlarni tekshirish
       console.log(`Yozuv: `, record);
 
-      // Maydonlar to'liq bo'lmasa, o'tkazib yuborish
       if (!record.name || !record.lat || !record.lng) {
         console.warn('Yuklanmagan yozuv, maydonlar to`liq emas:', record);
         continue;
       }
 
-      // Ma'lumotlarni MySQLga yozish
       try {
-        await insertRecord(record);  // MySQLga yozish
+        await insertRecord(db, record);
         console.log(`Yozuv muvaffaqiyatli yuklandi: `, record);
       } catch (err) {
         console.error('Yozuvni yuklashda xatolik yuz berdi:', err);
       }
     }
-
-    res.send('Fayl muvaffaqiyatli yuklandi va bazaga yozildi');
+    console.log('Fayl muvaffaqiyatli yuklandi va bazaga yozildi');
   } catch (error) {
     console.error('Fayl yuklashda yoki yozishda xatolik:', error);
-    res.status(500).send('Fayl yuklashda yoki yozishda xatolik');
+  } finally {
+    db.end();  // MySQL ulanishini yopish
   }
-});
+};
 
-// Serverni ishga tushirish
-app.listen(3000, () => {
-  console.log('Server 3000-portda ishlamoqda');
-});
+// Faylni yuklash jarayonini ishga tushirish
+const filePath = path.join(__dirname, './uploads/координаталар.xlsx');
+processAndUploadFile(filePath);
