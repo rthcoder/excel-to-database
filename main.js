@@ -5,10 +5,10 @@ const path = require('path');
 // MySQL ulanishini o‘rnatish funksiyasi
 const createDatabaseConnection = () => {
   const db = mysql.createConnection({
-    host: 'localhost',  // Masofaviy yoki lokal server IP manzili
-    user: 'root',           // MySQL foydalanuvchi nomi
-    password: 'your_password', // Foydalanuvchi paroli
-    database: 'excel',      // Ma'lumotlar bazasi nomi
+    host: '127.0.0.1',  // Masofaviy yoki lokal server IP manzili
+    user: 'fvv_user',           // MySQL foydalanuvchi nomi
+    password: 'fvv_!@#$%', // Foydalanuvchi paroli
+    database: 'fvv',      // Ma'lumotlar bazasi nomi
   });
 
   db.connect((err) => {
