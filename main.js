@@ -2,13 +2,12 @@ const mysql = require('mysql2');
 const xlsx = require('xlsx');
 const path = require('path');
 
-// MySQL ulanishini o‘rnatish funksiyasi
 const createDatabaseConnection = () => {
   const db = mysql.createConnection({
-    host: '127.0.0.1',  // Masofaviy yoki lokal server IP manzili
-    user: 'fvv_user',           // MySQL foydalanuvchi nomi
-    password: 'fvv_!@#$%', // Foydalanuvchi paroli
-    database: 'fvv',      // Ma'lumotlar bazasi nomi
+    host: '127.0.0.1',  
+    user: 'username',   
+    password: 'password', 
+    database: 'database',      
   });
 
   db.connect((err) => {
@@ -22,7 +21,6 @@ const createDatabaseConnection = () => {
   return db;
 };
 
-// Excel faylni o'qish va JSON formatiga aylantirish funksiyasi
 const readExcelFile = (filePath) => {
   const workbook = xlsx.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
@@ -30,7 +28,6 @@ const readExcelFile = (filePath) => {
   return xlsx.utils.sheet_to_json(sheet, { header: 1 });
 };
 
-// Ma'lumotlarni MySQL bazasiga yozish funksiyasi
 const insertRecord = (db, record) => {
   return new Promise((resolve, reject) => {
     const query = `
@@ -51,7 +48,6 @@ const insertRecord = (db, record) => {
   });
 };
 
-// Excel faylni o‘qib, MySQLga yozish jarayonini boshqaruvchi asosiy funksiya
 const processAndUploadFile = async (filePath) => {
   const db = createDatabaseConnection();
 
@@ -59,12 +55,12 @@ const processAndUploadFile = async (filePath) => {
     const data = readExcelFile(filePath);
     console.log("Excel fayli tarkibi:", data);
 
-    for (const row of data.slice(1)) {  // Birinchi qatorni o'tkazib yuboramiz (ustun sarlavhalari)
+    for (const row of data.slice(1)) { 
       const record = {
-        name: row[0],           // RU ustunidagi qiymat
-        description: row[1],    // Unnamed: 1 qiymatlari
-        lat: row[3],            // Unnamed: 3 (широта)
-        lng: row[4]             // Unnamed: 4 (долгата)
+        name: row[0],           
+        description: row[1],    
+        lat: row[3],            
+        lng: row[4]             
       };
 
       console.log(`Yozuv: `, record);
@@ -85,10 +81,9 @@ const processAndUploadFile = async (filePath) => {
   } catch (error) {
     console.error('Fayl yuklashda yoki yozishda xatolik:', error);
   } finally {
-    db.end();  // MySQL ulanishini yopish
+    db.end();  
   }
 };
 
-// Faylni yuklash jarayonini ishga tushirish
 const filePath = path.join(__dirname, './uploads/координаталар.xlsx');
 processAndUploadFile(filePath);
